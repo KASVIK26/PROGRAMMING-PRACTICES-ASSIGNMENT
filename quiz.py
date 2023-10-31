@@ -1,9 +1,7 @@
 import random
 
-# User database (username: name)
 user_db = {}
 
-# Questions database (category: [list of 10 questions])
 questions_db = {
     'General Knowledge': [
         {

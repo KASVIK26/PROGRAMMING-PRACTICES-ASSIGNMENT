@@ -1,9 +1,12 @@
 import random
+import tkinter as tk
 
+# User database (username: name)
 user_db = {}
 
+# Questions database (category: [list of 10 questions])
 questions_db = {
-    'General Knowledge': [
+'General Knowledge': [
         {
             "question": "What is the capital of France?",
             "options": ["Paris", "London", "Berlin", "Madrid"],
@@ -210,86 +213,112 @@ questions_db = {
             "options": ["Virus", "Spyware", "Firewall", "Encryption"],
             "answer": "Virus"
         }
-    ]
-}
+    ]}
 
 # Scoreboard (username: score)
 scoreboard = {}
 
+current_user = None  # To store the current user
+
 def register_user():
-    username = input("Enter your name: ")
-    user_db[username] = username  # Using the name as the username
-    scoreboard[username] = 0
-    print("User registered successfully.")
+    username = username_entry.get()
+    if username:
+        user_db[username] = username
+        scoreboard[username] = 0
+        username_entry.delete(0, 'end')
+        result_label.config(text=f"User '{username}' registered successfully.")
+    else:
+        result_label.config(text="Please enter a valid name.")
 
 def login_user():
-    name = input("Enter your name: ")
+    global current_user
+    name = username_entry.get()
     if name in user_db:
-        print("Login successful.")
-        return name
+        current_user = name
+        username_entry.delete(0, 'end')
+        result_label.config(text=f"Login successful, {current_user}.")
     else:
-        print("Name not found. Please register.")
-        return None
+        result_label.config(text="Name not found. Please register first.")
 
-def start_quiz(username):
-    print("Available Categories:")
-    for i, category in enumerate(questions_db.keys(), start=1):
-        print(f"{i}. {category}")
-
-    try:
-        selected_category_index = int(input("Choose a category (enter the number): ")) - 1
-        categories = list(questions_db.keys())
-        if 0 <= selected_category_index < len(categories):
-            selected_category = categories[selected_category_index]
+def start_quiz():
+    if current_user:
+        selected_category = category_var.get()
+        if selected_category in questions_db:
             questions = questions_db[selected_category]
             random.shuffle(questions)
             user_score = 0
             for question in questions[:10]:
-                print(question["question"])
-                for i, option in enumerate(question["options"], start=1):
-                    print(f"{i}. {option}")
-                user_answer = int(input("Enter the number of your answer: "))
-                if user_answer > 0 and user_answer <= len(question["options"]):
-                    if question["options"][user_answer - 1] == question["answer"]:
-                        user_score += 1
-                    else:
-                        print("Incorrect answer. The correct answer is:", question["answer"])
-                else:
-                    print("Invalid choice. Skipping this question.")
-            scoreboard[username] = user_score
-            print(f"Quiz completed. Your score: {user_score}")
+                question_text = question["question"]
+                options = question["options"]
+                correct_answer = question["answer"]
+                user_answer = ask_question(question_text, options)
+                if user_answer == correct_answer:
+                    user_score += 1
+            scoreboard[current_user] = user_score
+            result_label.config(text=f"Quiz completed. Your score: {user_score} points.")
         else:
-            print("Invalid category choice.")
-    except ValueError:
-        print("Invalid input. Please enter a number.")
+            result_label.config(text="Invalid category choice.")
+    else:
+        result_label.config(text="Please login first.")
+
+def ask_question(question_text, options):
+    question_window = tk.Toplevel(root)
+    question_window.title("Question")
+    question_label = tk.Label(question_window, text=question_text)
+    question_label.pack()
+    answer_var = tk.StringVar()
+    for i, option in enumerate(options, start=1):
+        option_radio = tk.Radiobutton(question_window, text=option, variable=answer_var, value=option)
+        option_radio.pack()
+    submit_button = tk.Button(question_window, text="Submit", command=question_window.destroy)
+    submit_button.pack()
+    question_window.wait_window(question_window)
+    return answer_var.get()
 
 def display_scoreboard():
     sorted_scores = sorted(scoreboard.items(), key=lambda x: x[1], reverse=True)
-    print("Scoreboard:")
-    for rank, (username, score) in enumerate(sorted_scores, start=1):
-        print(f"{rank}. {username}: {score} points")
+    scoreboard_window = tk.Toplevel(root)
+    scoreboard_window.title("Scoreboard")
+    scoreboard_label = tk.Label(scoreboard_window, text="Scoreboard")
+    scoreboard_label.pack()
+    for i, (username, score) in enumerate(sorted_scores, start=1):
+        score_label = tk.Label(scoreboard_window, text=f"{i}. {username}: {score} points")
+        score_label.pack()
 
-while True:
-    print("\nOptions:")
-    print("1. Register")
-    print("2. Login")
-    print("3. Start Quiz")
-    print("4. Display Scoreboard")
-    print("5. Quit")
-    choice = input("Enter your choice: ")
+# Create the main GUI window
+root = tk.Tk()
+root.title("Quiz Application")
 
-    if choice == '1':
-        register_user()
-    elif choice == '2':
-        username = login_user()
-    elif choice == '3':
-        if username:
-            start_quiz(username)
-        else:
-            print("Please login first.")
-    elif choice == '4':
-        display_scoreboard()
-    elif choice == '5':
-        break
-    else:
-        print("Invalid choice. Please try again.")
+# Create and configure GUI components
+username_label = tk.Label(root, text="Enter your name:")
+username_label.pack()
+
+username_entry = tk.Entry(root)
+username_entry.pack()
+
+register_button = tk.Button(root, text="Register", command=register_user)
+register_button.pack()
+
+login_button = tk.Button(root, text="Login", command=login_user)
+login_button.pack()
+
+category_label = tk.Label(root, text="Select a category:")
+category_label.pack()
+
+categories = list(questions_db.keys())
+category_var = tk.StringVar(root)
+category_var.set(categories[0])
+category_optionmenu = tk.OptionMenu(root, category_var, *categories)
+category_optionmenu.pack()
+
+start_button = tk.Button(root, text="Start Quiz", command=start_quiz)
+start_button.pack()
+
+result_label = tk.Label(root, text="")
+result_label.pack()
+
+scoreboard_button = tk.Button(root, text="Display Scoreboard", command=display_scoreboard)
+scoreboard_button.pack()
+
+# Start the GUI main loop
+root.mainloop()
